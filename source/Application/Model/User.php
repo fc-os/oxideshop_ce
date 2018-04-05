@@ -592,7 +592,7 @@ class User extends \OxidEsales\Eshop\Core\Model\BaseModel
 
                 $this->deleteAddresses($database);
                 $this->deleteUserFromGroups($database);
-                $this->deleteBasket($database);
+                $this->deleteBaskets($database);
                 $this->deleteNewsletterSubscriptions($database);
                 $this->deleteDeliveries($database);
                 $this->deleteDiscounts($database);
@@ -2386,11 +2386,11 @@ class User extends \OxidEsales\Eshop\Core\Model\BaseModel
     }
 
     /**
-     * Deletes Basket.
+     * Deletes noticelists, wishlists or saved baskets
      *
      * @param DatabaseInterface $database
      */
-    private function deleteBasket(DatabaseInterface $database)
+    private function deleteBaskets(DatabaseInterface $database)
     {
         $ids = $database->getCol('SELECT oxid FROM oxuserbaskets WHERE oxuserid = ?', [$this->getId()]);
         array_walk($ids, [$this, 'deleteItemById'], \OxidEsales\Eshop\Application\Model\UserBasket::class);
