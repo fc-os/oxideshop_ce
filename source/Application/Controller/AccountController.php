@@ -365,15 +365,13 @@ class AccountController extends \OxidEsales\Eshop\Application\Controller\Fronten
     public function deleteAccount()
     {
         $user = $this->getUser();
-
         if ($this->canUserAccountBeDeleted()) {
-            $user->delete();
-            $user->logout();
-
-            $session = $this->getSession();
-            $session->destroy();
-
-            $this->accountDeletionStatus = true;
+            $this->accountDeletionStatus = $user->delete();
+            if ($this->accountDeletionStatus) {
+                $user->logout();
+                $session = $this->getSession();
+                $session->destroy();
+            }
         } else {
             $this->accountDeletionStatus = false;
         }
@@ -386,9 +384,10 @@ class AccountController extends \OxidEsales\Eshop\Application\Controller\Fronten
      */
     public function isUserAllowedToDeleteOwnAccount()
     {
-        $allowUsersToDeleteTheirAccount = $this
-            ->getConfig()
-            ->getConfigParam('blAllowUsersToDeleteTheirAccount');
+        $allowUsersToDeleteTheirAccount =
+            $this
+                ->getConfig()
+                ->getConfigParam('blAllowUsersToDeleteTheirAccount');
 
         $user = $this->getUser();
 
