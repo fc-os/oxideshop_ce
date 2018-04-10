@@ -575,14 +575,6 @@ class User extends \OxidEsales\Eshop\Core\Model\BaseModel
             return false;
         }
 
-        /**
-         * Mall users are allowed to delete their account being in a different shop as the shop the account was
-         * originally created in.
-         */
-        if ($this->_blMallUsers) {
-            $this->setIsDerived(false);
-        }
-
         try {
             $deleted = parent::delete($oxid);
 
@@ -606,30 +598,10 @@ class User extends \OxidEsales\Eshop\Core\Model\BaseModel
 
                 $this->deleteAdditionally($quotedUserId);
 
-                /**
-                 * By any call to \OxidEsales\EshopCommunity\Core\Model\BaseModel::delete the fetch mode of the
-                 * current database connection is set to DatabaseInterface::FETCH_MODE_ASSOC
-                 *
-                 * By calling DatabaseProvider::getDb() without parameters, the fetch mode on the current connection
-                 * is reset to the default value, which at the moment is DatabaseInterface::FETCH_MODE_NUM
-                 *
-                 * @See \OxidEsales\EshopCommunity\Core\Model\BaseModel::delete
-                 * @See \OxidEsales\EshopCommunity\Core\DatabaseProvider::getDb
-                 */
-                $database = \OxidEsales\Eshop\Core\DatabaseProvider::getDb();
+                $this->resetFetchModeToDefault();
             }
         } catch (\Exception $exeption) {
-            /**
-             * By any call to \OxidEsales\EshopCommunity\Core\Model\BaseModel::delete the fetch mode of the
-             * current database connection is set to DatabaseInterface::FETCH_MODE_ASSOC
-             *
-             * By calling DatabaseProvider::getDb() without parameters, the fetch mode on the current connection
-             * is reset to the default value, which at the moment is DatabaseInterface::FETCH_MODE_NUM
-             *
-             * @See \OxidEsales\EshopCommunity\Core\Model\BaseModel::delete
-             * @See \OxidEsales\EshopCommunity\Core\DatabaseProvider::getDb
-             */
-            $database = \OxidEsales\Eshop\Core\DatabaseProvider::getDb();
+            $this->resetFetchModeToDefault();
 
             throw $exeption;
         }
@@ -2486,11 +2458,19 @@ class User extends \OxidEsales\Eshop\Core\Model\BaseModel
         /** @var \OxidEsales\Eshop\Core\Model\BaseModel $modelObject */
         $modelObject = oxNew($className);
 
-        if($modelObject->load($id)){
+        if ($modelObject->load($id)) {
             if ($this->_blMallUsers) {
                 $modelObject->setIsDerived(false);
             }
             $modelObject->delete();
         }
+    }
+
+    /**
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     */
+    private function resetFetchModeToDefault()
+    {
+        \OxidEsales\Eshop\Core\DatabaseProvider::getDb();
     }
 }

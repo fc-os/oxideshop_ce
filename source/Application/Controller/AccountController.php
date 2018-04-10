@@ -364,16 +364,22 @@ class AccountController extends \OxidEsales\Eshop\Application\Controller\Fronten
      */
     public function deleteAccount()
     {
+        $this->accountDeletionStatus = false;
         $user = $this->getUser();
-        if ($this->canUserAccountBeDeleted()) {
-            $this->accountDeletionStatus = $user->delete();
-            if ($this->accountDeletionStatus) {
-                $user->logout();
-                $session = $this->getSession();
-                $session->destroy();
-            }
-        } else {
-            $this->accountDeletionStatus = false;
+
+        /**
+         * Setting derived to false allows mall users to delete their account being in a different shop as the shop
+         * the account was originally created in.
+         */
+        if ($this->getConfig()->getConfigParam('blMallUsers')) {
+            $user->setIsDerived(false);
+        }
+
+        if ($this->canUserAccountBeDeleted() && $user->delete()) {
+            $this->accountDeletionStatus = true;
+            $user->logout();
+            $session = $this->getSession();
+            $session->destroy();
         }
     }
 
@@ -384,10 +390,9 @@ class AccountController extends \OxidEsales\Eshop\Application\Controller\Fronten
      */
     public function isUserAllowedToDeleteOwnAccount()
     {
-        $allowUsersToDeleteTheirAccount =
-            $this
-                ->getConfig()
-                ->getConfigParam('blAllowUsersToDeleteTheirAccount');
+        $allowUsersToDeleteTheirAccount = $this
+            ->getConfig()
+            ->getConfigParam('blAllowUsersToDeleteTheirAccount');
 
         $user = $this->getUser();
 
