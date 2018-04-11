@@ -7,6 +7,7 @@
 namespace OxidEsales\EshopCommunity\Internal\Review\Dao;
 
 use OxidEsales\EshopCommunity\Internal\Common\Database\QueryBuilderFactoryInterface;
+use OxidEsales\EshopCommunity\Internal\Common\DataMapper\IdentifiableObjectMapperInterface;
 use OxidEsales\EshopCommunity\Internal\Review\DataObject\ProductRating;
 use OxidEsales\EshopCommunity\Internal\Common\Exception\InvalidObjectIdDaoException;
 
@@ -23,13 +24,20 @@ class ProductRatingDao implements ProductRatingDaoInterface
     private $queryBuilderFactory;
 
     /**
-     * RatingDao constructor.
-     *
-     * @param QueryBuilderFactoryInterface $queryBuilderFactory
+     * @var IdentifiableObjectMapperInterface
      */
-    public function __construct(QueryBuilderFactoryInterface $queryBuilderFactory)
-    {
+    private $mapper;
+
+    /**
+     * @param QueryBuilderFactoryInterface      $queryBuilderFactory
+     * @param IdentifiableObjectMapperInterface $mapper
+     */
+    public function __construct(
+        QueryBuilderFactoryInterface        $queryBuilderFactory,
+        IdentifiableObjectMapperInterface   $mapper
+    ) {
         $this->queryBuilderFactory = $queryBuilderFactory;
+        $this->mapper = $mapper;
     }
 
     /**
@@ -73,25 +81,10 @@ class ProductRatingDao implements ProductRatingDaoInterface
             ->setMaxResults(1)
             ->setParameter('productId', $productId);
 
-        return $this->mapProductRating(
+        return $this->mapper->map(
+            new ProductRating(),
             $queryBuilder->execute()->fetch()
         );
-    }
-
-    /**
-     * @param array $productRatingData
-     *
-     * @return ProductRating
-     */
-    private function mapProductRating($productRatingData)
-    {
-        $productRating = new ProductRating();
-        $productRating
-            ->setProductId($productRatingData['OXID'])
-            ->setRatingAverage($productRatingData['OXRATING'])
-            ->setRatingCount($productRatingData['OXRATINGCNT']);
-
-        return $productRating;
     }
 
     /**
