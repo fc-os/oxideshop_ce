@@ -1179,104 +1179,17 @@ class UserTest extends \OxidTestCase
         $this->assertEquals(false, $oUser->delete());
     }
 
-    public function testDelete()
+    public function testDeleteUserAndNeededData()
     {
-        $oDb = $this->getDb();
+        $userId = $this->prepareUserDataForDeletion();
 
-        $oUser = $this->createUser();
-        $sUserId = $oUser->getId();
-
-        // user address
-        $oAddress = oxNew('oxAddress');
-        $oAddress->setId("_testAddress");
-        $oAddress->oxaddress__oxuserid = new oxField($sUserId);
-        $oAddress->save();
-
-        // user groups
-        $o2g = oxNew('oxBase');
-        $o2g->init("oxobject2group");
-        $o2g->setId("_testO2G");
-        $o2g->oxobject2group__oxobjectid = new oxField($sUserId);
-        $o2g->oxobject2group__oxgroupsid = new oxField($sUserId);
-        $o2g->save();
-
-        // notice/wish lists
-        $oU2B = oxNew('oxBase');
-        $oU2B->init("oxuserbaskets");
-        $oU2B->setId("_testU2B");
-        $oU2B->oxuserbaskets__oxuserid = new oxField($sUserId);
-        $oU2B->save();
-
-        // newsletter subscription
-        $oNewsSubs = oxNew('oxBase');
-        $oNewsSubs->init("oxnewssubscribed");
-        $oNewsSubs->setId("_testNewsSubs");
-        $oNewsSubs->oxnewssubscribed__oxemail = new oxField($sUserId);
-        $oNewsSubs->oxnewssubscribed__oxuserid = new oxField($sUserId);
-        $oNewsSubs->save();
-
-        // delivery and delivery sets
-        $o2d = oxNew('oxBase');
-        $o2d->init("oxobject2delivery");
-        $o2d->setId("_testo2d");
-        $o2d->oxobject2delivery__oxobjectid = new oxField($sUserId);
-        $o2d->oxobject2delivery__oxdeliveryid = new oxField($sUserId);
-        $o2d->save();
-
-        // discounts
-        $o2d = oxNew('oxBase');
-        $o2d->init("oxobject2discount");
-        $o2d->setId("_testo2d");
-        $o2d->oxobject2discount__oxobjectid = new oxField($sUserId);
-        $o2d->oxobject2discount__oxdiscountid = new oxField($sUserId);
-        $o2d->save();
-
-        // order information
-        $oRemark = oxNew('oxBase');
-        $oRemark->init("oxremark");
-        $oRemark->setId("_testRemark");
-        $oRemark->oxremark__oxparentid = new oxField($sUserId);
-        $oRemark->oxremark__oxtype = new oxField('r');
-        $oRemark->save();
-
-        $recommendationList = oxNew(RecommendationList::class);
-        $recommendationList->setId("_testRecommendationList");
-        $recommendationList->oxrecommlists__oxuserid = new Field($sUserId);
-        $recommendationList->oxrecommlists__oxshopid = new Field(1);
-        $recommendationList->oxrecommlists__oxtitle = new Field("Test title");
-        $recommendationList->save();
-
-        $review = oxNew(Review::class);
-        $review->setId("_testReview");
-        $review->oxreviews__oxuserid = new Field($sUserId);
-        $review->oxreviews__oxtext = new Field("Supergood");
-        $review->save();
-
-        $rating = oxNew(Rating::class);
-        $rating->setId("_testRating");
-        $rating->oxratings__oxuserid = new Field($sUserId);
-        $rating->oxratings__oxrating = new Field(5);
-        $rating->save();
-
-        $priceAlarm = oxNew(PriceAlarm::class);
-        $priceAlarm->setId("_testPriceAlarm");
-        $priceAlarm->oxpricealarm__oxuserid = new Field($sUserId);
-        $priceAlarm->save();
-
-        $userPayment = oxNew(UserPayment::class);
-        $userPayment->setId("_testUserPayment");
-        $userPayment->oxuserpayments__oxuserid = new Field($sUserId);
-        $userPayment->save();
-
-        $oDb->execute("INSERT INTO oxacceptedterms (oxuserid) VALUES(?)", [$sUserId]);
-
-        $oUser = oxNew('oxUser');
-        $oUser->load($sUserId);
-        $bSuccess = $oUser->delete();
+        $user = oxNew('oxUser');
+        $user->load($userId);
+        $bSuccess = $user->delete();
 
         $this->assertEquals(true, $bSuccess);
 
-        $aWhat = array('oxuser'            => 'oxid',
+        $tableFieldsToCheck = array('oxuser'            => 'oxid',
                        'oxaddress'         => 'oxuserid',
                        'oxuserbaskets'     => 'oxuserid',
                        'oxnewssubscribed'  => 'oxuserid',
@@ -1295,16 +1208,16 @@ class UserTest extends \OxidTestCase
         );
 
         // now checking if all related records were deleted
-        foreach ($aWhat as $sTable => $sField) {
-            $sQ = 'select count(*) from ' . $sTable . ' where ' . $sField . ' = "' . $sUserId . '" ';
+        foreach ($tableFieldsToCheck as $table => $field) {
+            $query = 'select count(*) from ' . $table . ' where ' . $field . ' = "' . $userId . '" ';
 
-            if ($sTable == 'oxremark') {
-                $sQ .= " AND oxtype ='o'";
+            if ($table == 'oxremark') {
+                $query .= " AND oxtype ='o'";
             }
 
-            $iCnt = $oDb->getOne($sQ);
-            if ($iCnt > 0) {
-                $this->fail($iCnt . ' records were not deleted from "' . $sTable . '" table');
+            $count = $this->getDb()->getOne($query);
+            if ($count > 0) {
+                $this->fail($count . ' records were not deleted from "' . $table . '" table');
             }
         }
     }
@@ -2887,5 +2800,101 @@ class UserTest extends \OxidTestCase
         $user = $this->createUser();
 
         $this->assertFalse($user->isMallAdmin());
+    }
+
+    /**
+     * @return string
+     */
+    protected function prepareUserDataForDeletion()
+    {
+        $user = $this->createUser();
+        $sUserId = $user->getId();
+
+        // user address
+        $oAddress = oxNew('oxAddress');
+        $oAddress->setId("_testAddress");
+        $oAddress->oxaddress__oxuserid = new oxField($sUserId);
+        $oAddress->save();
+
+        // user groups
+        $o2g = oxNew('oxBase');
+        $o2g->init("oxobject2group");
+        $o2g->setId("_testO2G");
+        $o2g->oxobject2group__oxobjectid = new oxField($sUserId);
+        $o2g->oxobject2group__oxgroupsid = new oxField($sUserId);
+        $o2g->save();
+
+        // notice/wish lists
+        $oU2B = oxNew('oxBase');
+        $oU2B->init("oxuserbaskets");
+        $oU2B->setId("_testU2B");
+        $oU2B->oxuserbaskets__oxuserid = new oxField($sUserId);
+        $oU2B->save();
+
+        // newsletter subscription
+        $oNewsSubs = oxNew('oxBase');
+        $oNewsSubs->init("oxnewssubscribed");
+        $oNewsSubs->setId("_testNewsSubs");
+        $oNewsSubs->oxnewssubscribed__oxemail = new oxField($sUserId);
+        $oNewsSubs->oxnewssubscribed__oxuserid = new oxField($sUserId);
+        $oNewsSubs->save();
+
+        // delivery and delivery sets
+        $o2d = oxNew('oxBase');
+        $o2d->init("oxobject2delivery");
+        $o2d->setId("_testo2d");
+        $o2d->oxobject2delivery__oxobjectid = new oxField($sUserId);
+        $o2d->oxobject2delivery__oxdeliveryid = new oxField($sUserId);
+        $o2d->save();
+
+        // discounts
+        $o2d = oxNew('oxBase');
+        $o2d->init("oxobject2discount");
+        $o2d->setId("_testo2d");
+        $o2d->oxobject2discount__oxobjectid = new oxField($sUserId);
+        $o2d->oxobject2discount__oxdiscountid = new oxField($sUserId);
+        $o2d->save();
+
+        // order information
+        $oRemark = oxNew('oxBase');
+        $oRemark->init("oxremark");
+        $oRemark->setId("_testRemark");
+        $oRemark->oxremark__oxparentid = new oxField($sUserId);
+        $oRemark->oxremark__oxtype = new oxField('r');
+        $oRemark->save();
+
+        $recommendationList = oxNew(RecommendationList::class);
+        $recommendationList->setId("_testRecommendationList");
+        $recommendationList->oxrecommlists__oxuserid = new Field($sUserId);
+        $recommendationList->oxrecommlists__oxshopid = new Field(1);
+        $recommendationList->oxrecommlists__oxtitle = new Field("Test title");
+        $recommendationList->save();
+
+        $review = oxNew(Review::class);
+        $review->setId("_testReview");
+        $review->oxreviews__oxuserid = new Field($sUserId);
+        $review->oxreviews__oxtext = new Field("Supergood");
+        $review->save();
+
+        $rating = oxNew(Rating::class);
+        $rating->setId("_testRating");
+        $rating->oxratings__oxuserid = new Field($sUserId);
+        $rating->oxratings__oxrating = new Field(5);
+        $rating->save();
+
+        $priceAlarm = oxNew(PriceAlarm::class);
+        $priceAlarm->setId("_testPriceAlarm");
+        $priceAlarm->oxpricealarm__oxuserid = new Field($sUserId);
+        $priceAlarm->save();
+
+        $userPayment = oxNew(UserPayment::class);
+        $userPayment->setId("_testUserPayment");
+        $userPayment->oxuserpayments__oxuserid = new Field($sUserId);
+        $userPayment->save();
+
+        $database = $this->getDb();
+        $database->execute("INSERT INTO oxacceptedterms (oxuserid) VALUES(?)", [$sUserId]);
+
+        return $sUserId;
     }
 }
